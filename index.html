@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System</title>
+    <style>
+        /* ── Reset & base ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* ── Star canvas (behind everything) ── */
+        #star-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+
+        /* ── Solar system container ── */
+        .solar-system {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        /* ── Orbit rings ── */
+        .orbit {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: spin linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Each orbit has its own size and speed */
+        .orbit-mercury  { width: 130px;  height: 130px;  animation-duration: 4.1s; }
+        .orbit-venus    { width: 200px;  height: 200px;  animation-duration: 10.5s; }
+        .orbit-earth    { width: 290px;  height: 290px;  animation-duration: 17s; }
+        .orbit-mars     { width: 380px;  height: 380px;  animation-duration: 32s; }
+        .orbit-jupiter  { width: 510px;  height: 510px;  animation-duration: 200s; }
+        .orbit-saturn   { width: 640px;  height: 640px;  animation-duration: 500s; }
+        .orbit-uranus   { width: 750px;  height: 750px;  animation-duration: 840s; }
+        .orbit-neptune  { width: 860px;  height: 860px;  animation-duration: 1648s; }
+
+        /* ── Planet dot positioned at top of its orbit ring ── */
+        .planet {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%) translateY(-50%);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: filter 0.2s;
+        }
+
+        .planet:hover { filter: brightness(1.6); }
+
+        /* ── Planet colours (CSS gradients — zero image deps) ── */
+        .sun {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #fff7aa, #ffcc00 40%, #ff8800 75%, #ff4400);
+            box-shadow:
+                0 0  30px 10px rgba(255,200,0,0.7),
+                0 0  80px 30px rgba(255,140,0,0.4),
+                0 0 150px 60px rgba(255,80,0,0.15);
+            cursor: pointer;
+            z-index: 10;
+            animation: pulse-sun 4s ease-in-out infinite;
+        }
+        @keyframes pulse-sun {
+            0%,100% { box-shadow: 0 0 30px 10px rgba(255,200,0,0.7), 0 0 80px 30px rgba(255,140,0,0.4), 0 0 150px 60px rgba(255,80,0,0.15); }
+            50%      { box-shadow: 0 0 40px 15px rgba(255,220,0,0.9), 0 0 100px 40px rgba(255,160,0,0.5), 0 0 180px 80px rgba(255,100,0,0.2); }
+        }
+
+        .mercury {
+            width: 8px; height: 8px;
+            background: radial-gradient(circle at 35% 35%, #e8d5b0, #b0956e);
+        }
+        .venus {
+            width: 14px; height: 14px;
+            background: radial-gradient(circle at 35% 35%, #fffacc, #e8c870 50%, #c8963a);
+        }
+        .earth {
+            width: 14px; height: 14px;
+            background: radial-gradient(circle at 35% 35%, #8af0ff, #2b77e0 40%, #1a5cbf 60%, #1a8c40);
+        }
+        .mars {
+            width: 10px; height: 10px;
+            background: radial-gradient(circle at 35% 35%, #ffaa88, #cc4422);
+        }
+        .jupiter {
+            width: 36px; height: 36px;
+            background: radial-gradient(circle at 35% 35%, #f0dcc0, #d4a87a 30%, #b88050 55%, #8c5a30);
+            box-shadow: inset 0 4px 0 rgba(255,220,150,0.3), inset 0 8px 0 rgba(150,90,40,0.4);
+        }
+        .saturn {
+            width: 28px; height: 28px;
+            background: radial-gradient(circle at 35% 35%, #f5e8c0, #d4b87a 40%, #b89050);
+            position: relative;
+        }
+        /* Saturn's ring using pseudo-element */
+        .saturn::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 56px; height: 14px;
+            transform: translate(-50%,-50%) rotateX(70deg);
+            border-radius: 50%;
+            border: 5px solid rgba(210,185,130,0.55);
+            box-shadow: 0 0 4px rgba(210,185,130,0.3);
+            pointer-events: none;
+        }
+        .uranus {
+            width: 20px; height: 20px;
+            background: radial-gradient(circle at 35% 35%, #c0f0f8, #7ec8d8 50%, #4aa0b8);
+        }
+        .neptune {
+            width: 18px; height: 18px;
+            background: radial-gradient(circle at 35% 35%, #a0b8ff, #3050d0 50%, #1828a8);
+        }
+
+        /* ── Moon orbiting Earth ── */
+        .earth-wrapper {
+            position: absolute;
+            top: 0; left: 50%;
+            transform: translateX(-50%) translateY(-50%);
+            width: 14px; height: 14px;
+        }
+        .moon-orbit {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 36px; height: 36px;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 50%;
+            transform: translate(-50%,-50%);
+            animation: spin 2.7s linear infinite;
+        }
+        .moon {
+            position: absolute;
+            top: 0; left: 50%;
+            transform: translateX(-50%) translateY(-50%);
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #eeeeee, #aaaaaa);
+        }
+
+        /* ── Tooltip ── */
+        .tooltip {
+            position: fixed;
+            background: rgba(13,17,23,0.92);
+            border: 1px solid rgba(88,166,255,0.35);
+            border-radius: 10px;
+            padding: 0.65rem 1rem;
+            color: #f0f6fc;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            pointer-events: none;
+            z-index: 100;
+            max-width: 220px;
+            backdrop-filter: blur(6px);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .tooltip.visible { opacity: 1; }
+        .tooltip strong { color: #58a6ff; font-size: 0.95rem; }
+
+        /* ── Speed control ── */
+        .controls {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: rgba(13,17,23,0.85);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 0.6rem 1.4rem;
+            backdrop-filter: blur(8px);
+            color: #8b949e;
+            font-size: 0.85rem;
+        }
+        .controls label { color: #f0f6fc; font-size: 0.85rem; }
+        .controls input[type=range] {
+            width: 120px;
+            accent-color: #58a6ff;
+            cursor: pointer;
+        }
+        #speed-val { color: #58a6ff; font-weight: 600; min-width: 28px; }
+
+        /* ── Title ── */
+        .title {
+            position: fixed;
+            top: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            color: rgba(240,246,252,0.5);
+            font-size: 0.85rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        /* ── Asteroid belt (decorative dots) ── */
+        .belt {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 445px; height: 445px;
+            transform: translate(-50%,-50%);
+            border-radius: 50%;
+            animation: spin 80s linear infinite;
+            z-index: 0;
+        }
+        .belt-dot {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(180,160,140,0.55);
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="star-canvas"></canvas>
+
+<div class="title">Solar System</div>
+
+<div class="solar-system" id="solar-system">
+
+    <!-- Sun -->
+    <div class="sun" data-name="Sun" data-info="Type: G-type main-sequence star | Diameter: 1.39 million km | Surface temp: 5,778 K | Age: 4.6 billion years"></div>
+
+    <!-- Asteroid belt (drawn by JS) -->
+    <div class="belt" id="belt"></div>
+
+    <!-- Mercury -->
+    <div class="orbit orbit-mercury">
+        <div class="planet mercury" data-name="Mercury" data-info="Order: 1st | Diameter: 4,879 km | Day: 59 Earth days | Year: 88 Earth days | Moons: 0"></div>
+    </div>
+
+    <!-- Venus -->
+    <div class="orbit orbit-venus">
+        <div class="planet venus" data-name="Venus" data-info="Order: 2nd | Diameter: 12,104 km | Day: 243 Earth days | Year: 225 Earth days | Moons: 0"></div>
+    </div>
+
+    <!-- Earth + Moon -->
+    <div class="orbit orbit-earth">
+        <div class="earth-wrapper">
+            <div class="planet earth" data-name="Earth" data-info="Order: 3rd | Diameter: 12,742 km | Day: 24 hrs | Year: 365.25 days | Moons: 1"></div>
+            <div class="moon-orbit">
+                <div class="moon" data-name="Moon" data-info="Earth's natural satellite | Diameter: 3,474 km | Orbital period: 27.3 days | Distance: 384,400 km"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mars -->
+    <div class="orbit orbit-mars">
+        <div class="planet mars" data-name="Mars" data-info="Order: 4th | Diameter: 6,779 km | Day: 24h 37m | Year: 687 Earth days | Moons: 2 (Phobos, Deimos)"></div>
+    </div>
+
+    <!-- Jupiter -->
+    <div class="orbit orbit-jupiter">
+        <div class="planet jupiter" data-name="Jupiter" data-info="Order: 5th | Diameter: 139,820 km | Day: 10 hrs | Year: 11.9 Earth years | Moons: 95"></div>
+    </div>
+
+    <!-- Saturn -->
+    <div class="orbit orbit-saturn">
+        <div class="planet saturn" data-name="Saturn" data-info="Order: 6th | Diameter: 116,460 km | Day: 10.7 hrs | Year: 29.5 Earth years | Moons: 146 | Has rings"></div>
+    </div>
+
+    <!-- Uranus -->
+    <div class="orbit orbit-uranus">
+        <div class="planet uranus" data-name="Uranus" data-info="Order: 7th | Diameter: 50,724 km | Day: 17.2 hrs | Year: 84 Earth years | Moons: 28"></div>
+    </div>
+
+    <!-- Neptune -->
+    <div class="orbit orbit-neptune">
+        <div class="planet neptune" data-name="Neptune" data-info="Order: 8th | Diameter: 49,244 km | Day: 16 hrs | Year: 165 Earth years | Moons: 16"></div>
+    </div>
+
+</div><!-- /.solar-system -->
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- Controls -->
+<div class="controls">
+    <label for="speed-slider">Speed:</label>
+    <input type="range" id="speed-slider" min="0.1" max="5" step="0.1" value="1">
+    <span id="speed-val">1×</span>
+    <span style="color:rgba(255,255,255,0.2)">|</span>
+    <span>Hover planets for info</span>
+</div>
+
+<script>
+(function () {
+    /* ── Starfield ─────────────────────────────────────────── */
+    const canvas = document.getElementById('star-canvas');
+    const ctx    = canvas.getContext('2d');
+    const stars  = [];
+
+    function resizeCanvas() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    function initStars(n) {
+        stars.length = 0;
+        for (let i = 0; i < n; i++) {
+            stars.push({
+                x:       Math.random() * canvas.width,
+                y:       Math.random() * canvas.height,
+                r:       Math.random() * 1.2 + 0.1,
+                alpha:   Math.random(),
+                speed:   Math.random() * 0.008 + 0.002,
+                phase:   Math.random() * Math.PI * 2,
+            });
+        }
+    }
+
+    function drawStars(t) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        stars.forEach(s => {
+            const a = 0.4 + 0.5 * Math.sin(t * s.speed + s.phase);
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,255,255,${a})`;
+            ctx.fill();
+        });
+        requestAnimationFrame(drawStars);
+    }
+
+    window.addEventListener('resize', () => { resizeCanvas(); initStars(700); });
+    resizeCanvas();
+    initStars(700);
+    requestAnimationFrame(drawStars);
+
+    /* ── Asteroid belt ──────────────────────────────────────── */
+    const belt = document.getElementById('belt');
+    const BELT_R = 222;   // half of 445px belt div
+    for (let i = 0; i < 200; i++) {
+        const dot  = document.createElement('div');
+        dot.className = 'belt-dot';
+        const angle  = Math.random() * 2 * Math.PI;
+        const spread = (Math.random() - 0.5) * 30;
+        const r      = BELT_R + spread;
+        const size   = Math.random() * 2 + 0.5;
+        dot.style.cssText = `
+            width:${size}px; height:${size}px;
+            left:${50 + Math.cos(angle) * r / BELT_R * 50}%;
+            top: ${50 + Math.sin(angle) * r / BELT_R * 50}%;
+            opacity:${0.3 + Math.random() * 0.5};
+        `;
+        belt.appendChild(dot);
+    }
+
+    /* ── Speed control ─────────────────────────────────────── */
+    const slider   = document.getElementById('speed-slider');
+    const speedVal = document.getElementById('speed-val');
+
+    function applySpeed(mult) {
+        const orbits = document.querySelectorAll('.orbit, .moon-orbit, .belt, .sun');
+        orbits.forEach(el => {
+            const base = parseFloat(getComputedStyle(el).animationDuration);
+            if (!el.dataset.baseDuration) {
+                el.dataset.baseDuration = base;
+            }
+            const newDur = parseFloat(el.dataset.baseDuration) / mult;
+            el.style.animationDuration = newDur + 's';
+        });
+        speedVal.textContent = mult + '×';
+    }
+
+    slider.addEventListener('input', () => {
+        const v = parseFloat(slider.value);
+        applySpeed(Math.round(v * 10) / 10);
+    });
+
+    /* ── Tooltip on hover ──────────────────────────────────── */
+    const tooltip = document.getElementById('tooltip');
+
+    document.querySelectorAll('[data-name]').forEach(el => {
+        el.addEventListener('mouseenter', e => {
+            const name = el.dataset.name;
+            const info = el.dataset.info || '';
+            const lines = info.split('|').map(s => s.trim()).filter(Boolean);
+            tooltip.innerHTML = `<strong>${name}</strong><br>${lines.join('<br>')}`;
+            tooltip.classList.add('visible');
+        });
+        el.addEventListener('mousemove', e => {
+            tooltip.style.left = (e.clientX + 16) + 'px';
+            tooltip.style.top  = (e.clientY + 16) + 'px';
+        });
+        el.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('visible');
+        });
+    });
+
+})();
+</script>
+</body>
+</html>
